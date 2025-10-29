@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <h1>📚 Información Disponible</h1>
+      <div id="userInfo"></div>
+    </div>
+
+    <div class="nav-links" id="navLinks"></div>
+
+    <div id="loadingMessage" class="loading">Cargando información...</div>
+    <div id="informationContainer"></div>
+  </div>
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  
+  <script>
+    let currentUserRole = null;
+
+    // Inicializar página
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Proteger página (requiere login)
+      await protectPage();
+      
+      // Mostrar información del usuario
+      await displayUserInfo();
+      
+      // Verificar rol y mostrar enlaces
+      currentUserRole = await getUserRole();
+      const navLinks = document.getElementById('navLinks');
+      
+      if (currentUserRole === 'admin') {
+        navLinks.innerHTML = `
+          <a href="admin.html" class="btn btn-primary">Panel de Administración</a>
+          <a href="dashboard.html" class="btn btn-secondary">Ver Información</a>
+        `;
+      } else {
+        navLinks.innerHTML = `
+          <p class="info-box">Eres un usuario normal. Puedes consultar toda la información disponible.</p>
+        `;
+      }
+      
+      // Cargar información
+      await loadInformation();
+    });
+
+    // Cargar y mostrar información
+    async function loadInformation() {
+      const loadingMessage = document.getElementById('loadingMessage');
+      const container = document.getElementById('informationContainer');
+      
+      try {
+        const data = await getInformation();
+        
+        loadingMessage.style.display = 'none';
+        
+        if (data.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <h3>📭 No hay información disponible</h3>
+              <p>Aún no se ha publicado ninguna información.</p>
+              ${currentUserRole === 'admin' ? '<p><a href="admin.html" class="btn btn-primary">Publicar información</a></p>' : ''}
+            </div>
+          `;
+          return;
+        }
+        
+        let html = '<div class="information-grid">';
+        
+        data.forEach(item => {
+          html += `
+            <div class="info-card">
+              <h3>${item.title}</h3>
+              <div class="info-card-date">📅 ${formatDate(item.created_at)}</div>
+              <p>${item.content}</p>
+            </div>
+          `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+        
+      } catch (error) {
+        loadingMessage.style.display = 'none';
+        container.innerHTML = `
+          <div class="alert alert-error">
+            Error al cargar la información: ${error.message}
+          </div>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
